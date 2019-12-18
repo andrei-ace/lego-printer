@@ -1,0 +1,216 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "alphabet with mindstorms",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "LearnIntent",
+                    "slots": [
+                        {
+                            "name": "Letter",
+                            "type": "Letter",
+                            "samples": [
+                                "letter {Letter}",
+                                "{Letter}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "write letter {Letter}",
+                        "write {Letter}",
+                        "learn letter {Letter}",
+                        "draw letter {Letter}",
+                        "draw {Letter}",
+                        "learn {Letter}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "Letter",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "Z"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Y"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "X"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "W"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "V"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "U"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "T"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "S"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "R"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Q"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "P"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "O"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "N"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "M"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "L"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "K"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "J"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "I"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "H"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "G"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "F"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "E"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "D"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "C"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "B"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "A"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "LearnIntent",
+                    "delegationStrategy": "ALWAYS",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Letter",
+                            "type": "Letter",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1207405175159.184443735393"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1207405175159.184443735393",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What letter should it be?"
+                    }
+                ]
+            }
+        ]
+    }
+}
