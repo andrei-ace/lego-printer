@@ -132,17 +132,13 @@ const LearnIntentHandler = {
     handle: function (handlerInput) {
 
         let letter = Alexa.getSlotValue(handlerInput.requestEnvelope, 'Letter');
-        if (letter.length > 1) {
-            letter = letter.charAt(0);
-        }
+        letter = letter.charAt(0).toUpperCase();
+        letter = letter.toUpperCase();
         const attributesManager = handlerInput.attributesManager;
         let endpointId = attributesManager.getSessionAttributes().endpointId || [];
 
         // Set skill duration to 1 minute (2 30-seconds interval)
         Util.putSessionAttribute(handlerInput, 'duration', 2);
-        // Set the token to track the event handler
-        const token = handlerInput.requestEnvelope.request.requestId;
-        Util.putSessionAttribute(handlerInput, 'token', token);
 
         let directive = Util.build(endpointId, NAMESPACE, NAME_LEARN,
             {
@@ -222,9 +218,7 @@ const ExpiredRequestHandler = {
 
         const attributesManager = handlerInput.attributesManager;
 
-        // Set the token to track the event handler
-        const token = handlerInput.requestEnvelope.request.requestId;
-        Util.putSessionAttribute(handlerInput, 'token', token);
+        let token = handlerInput.attributesManager.getSessionAttributes().token || '';
 
         let duration = attributesManager.getSessionAttributes().duration || 0;
         if (duration > 0) {

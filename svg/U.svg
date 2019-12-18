@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+    <rect width="100" height="100" fill="beige"/>
+    <path d="M 30 10 L 30 70 A 20 20 0 0 0 70 70 L 70 10" fill="black" fill-opacity="0.1" stroke="black">
+        <title>Start at the top and do a line down then curve it at the bottom and go up again</title>
+    </path>
+</svg>

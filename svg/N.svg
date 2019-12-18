@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+    <rect width="100" height="100" fill="beige"/>
+    <line x1="30" x2="30" y1="10" y2="90" stroke="black" >
+        <title>Start at the top and do a straight line all the way to the bottom</title>
+    </line>
+    <line x1="30" x2="70" y1="10" y2="90" stroke="black" >
+        <title>Go back at the top and do a diagonal line all the way to the bottom</title>
+    </line>
+
+    <line x1="70" x2="70" y1="90" y2="10" stroke="black" >
+        <title>Then do a straight line up</title>
+    </line>
+
+</svg>

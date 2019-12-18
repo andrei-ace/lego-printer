@@ -22,7 +22,7 @@ MAX_ROTATION_X = 16
 MAX_ROTATION_Y = 16
 MAX_SPEED_X = 80
 MAX_SPEED_Y = 80
-DEGREES_PEN = 21
+DEGREES_PEN = 27
 
 # set logger to display on both EV3 Brick and console
 logging.basicConfig(level=logging.INFO, stream=stdout,
@@ -74,7 +74,6 @@ class Printer(object):
         self._pen_down = False
 
     def draw_arc(self, rad_x, rad_y, large, sweep, sx, sy, ex, ey):
-        self.pen_down()
         h, k, start, end = self.solver.solve_ellipse(
             (sx, sy), (ex, ey), rad_x, rad_y, large, sweep)
         print('The solution is:', h, k, start*180/pi, "->", end*180/pi)
@@ -102,7 +101,7 @@ class Printer(object):
         angle_done = 0
         integral_error_x = 0
         integral_error_y = 0
-        integral_weight = 0.1
+        integral_weight = 0.15
         while angle_done < angle_to_do:
             dx = -sin(angle) * rad_x * cclock - \
                 integral_error_x * integral_weight
@@ -119,11 +118,11 @@ class Printer(object):
             angle = self.solver.solve_angle(
                 cx=h, cy=k, a=rad_x, b=rad_y, px=self.x(), py=self.y())
             step_angle = abs(angle-old_angle)
+
             if(step_angle > pi):
                 step_angle = 2*pi - step_angle
+
             angle_done += step_angle
-            if angle < 0:
-                angle += 2*pi
 
             x_sol = cos(angle) * rad_x + h
             y_sol = sin(angle) * rad_y + k
@@ -131,29 +130,30 @@ class Printer(object):
             integral_error_y += (self.y()-y_sol)
 
             step += 1
-            if(step > 100):
+            if(step > 1000):
                 break
 
         self.motor_x.stop()
         self.motor_y.stop()
-        self.pen_up()
 
-    def draw_line(self, from_x, from_y, to_x, to_y):
+    def draw_line(self, from_x, from_y, to_x, to_y, pen=True):
         self.move_wh(from_x - self.x(), from_y - self.y())
-        self.pen_down()
-        if (to_x-self.x()) < 0.001 and (to_x-self.x()) > -0.001:
+        if pen:
+            self.pen_down()
+        if (to_x-self.x()) < 0.000001 and (to_x-self.x()) > -0.000001:
             self.move_wh(0, to_y-self.y())
         else:
-            m = (to_y-self.y())/(to_x-self.x())
+            m = abs((to_y-self.y())/(to_x-self.x()))
             speed_x = 1
             speed_y = m * speed_x
             magnitude = sqrt(speed_x**2 + speed_y**2)
             speed_x = (speed_x/magnitude) * MAX_SPEED_X
             speed_y = (speed_y/magnitude) * MAX_SPEED_Y
-
             self.move_wh(to_x-self.x(), to_y-self.y(),
                          speed_x=speed_x, speed_y=speed_y)
-        self.pen_up()
+
+        if pen:
+            self.pen_up()
 
     def draw_svg_path(self, path, width, height):
         path_list = path.split(" ")
@@ -169,6 +169,14 @@ class Printer(object):
                 m_y = y
                 self.move_wh(x-self.x(), y-self.y())
                 index += 3
+                self.pen_down()
+            elif current == 'L':
+                x = float(path_list[index+1]) / width
+                y = float(path_list[index+2]) / height
+                m_x = x
+                m_y = y
+                self.draw_line(m_x, m_y, x, y, pen=False)
+                index += 3
             elif current == 'A':
                 rad_x = float(path_list[index+1]) / width
                 rad_y = float(path_list[index+2]) / height
@@ -178,8 +186,11 @@ class Printer(object):
                 dy = float(path_list[index+7]) / width
                 index += 8
                 self.draw_arc(rad_x, rad_y, large, sweep, m_x, m_y, dx, dy)
+                m_x = dx
+                m_y = dy
             else:
                 index += 1
+        self.pen_up()
 
 
 class Solver(object):
@@ -207,13 +218,13 @@ class Solver(object):
         n = -2*(a**2)*y1 + 2*(a**2)*y2
         q = -(b**2)*x1**2 - (a**2)*(y1**2) + (b**2)*(x2**2) + (a**2)*(y2**2)
 
-        if n != 0:
+        if n < -0.000001 or n > 0.000001:
             aa = b**2 + (a**2)*(m**2)/(n**2)
             bb = -2*(b**2)*x1 - (2*q*(a**2)*m)/(n**2) + (2*(a**2)*y1*m)/n
             cc = ((a**2)*(q**2))/(n**2) - (2*(a**2)*y1*q)/n + \
                 (b**2)*(x1**2) + (a**2)*(y1**2) - (a**2)*(b**2)
 
-            if bb**2 - 4*aa*cc < -0.001 or bb**2 - 4*aa*cc > 0.001:
+            if bb**2 - 4*aa*cc < -0.000001 or bb**2 - 4*aa*cc > 0.000001:
                 h1 = (-bb + sqrt(bb**2 - 4*aa*cc))/(2*aa)
                 h2 = (-bb - sqrt(bb**2 - 4*aa*cc))/(2*aa)
             else:
@@ -224,12 +235,19 @@ class Solver(object):
         else:
             aa = a**2
             bb = -2*a**2*y1
-            cc = b**2*q**2/m**2 - 2*b**2*x1*q/m + b**2*x1**2 + a**2*y1**2 - a**2*b**2
+            if m < -0.0000001 or m > 0.000001:
+                cc = b**2*q**2/m**2 - 2*b**2*x1*q/m + b**2*x1**2 + a**2*y1**2 - a**2*b**2
 
-            h1 = q/m
-            h2 = q/m
-            k1 = (-bb + sqrt(bb**2 - 4*aa*cc))/(2*aa)
-            k2 = (-bb - sqrt(bb**2 - 4*aa*cc))/(2*aa)
+                h1 = q/m
+                h2 = q/m
+                if bb**2 - 4*aa*cc < -0.000001 or bb**2 - 4*aa*cc > 0.000001:
+                    k1 = (-bb + sqrt(bb**2 - 4*aa*cc))/(2*aa)
+                    k2 = (-bb - sqrt(bb**2 - 4*aa*cc))/(2*aa)
+                else:
+                    k1 = k2 = (-bb)/(2*aa)
+            else:
+                h1 = h2 = x1
+                k1 = k2 = (-bb)/(2*aa)
 
         h = "h"
         k = "k"
@@ -240,6 +258,7 @@ class Solver(object):
             ]
         else:
             results = [{h: h1, k: k1}]
+
         results_len = len(results)
         for result in results:
             theta1 = 0
@@ -356,6 +375,8 @@ class MindstormsGadget(AlexaGadget):
                 if directive.payload.speechmarksData[-1].value == 'sil':
                     # sleep until time
                     print('received silence', file=stderr)
+                    # sleep(
+                    #     int(directive.payload.speechmarksData[-1].startOffsetInMilliSeconds)/1000)
                     self._waiting_for_speech = False
 
         except KeyError:
@@ -366,8 +387,7 @@ class MindstormsGadget(AlexaGadget):
         print('drawing letter ', letter, file=stderr)
         while self._waiting_for_speech:
             sleep(0.1)
-        print('done', file=stderr)
-        file = "svg/B.svg"
+        file = "svg/"+letter+".svg"
         tree = ET.parse(file)
         root = tree.getroot()
         width = int(root.attrib["width"])
@@ -383,7 +403,6 @@ class MindstormsGadget(AlexaGadget):
                                 'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
                             while self._waiting_for_speech:
                                 sleep(0.1)
-                            print('done', file=stderr)
                     self.printer.draw_svg_path(
                         child.attrib["d"], width, height)
                 elif child.tag == '{http://www.w3.org/2000/svg}line':
@@ -394,7 +413,6 @@ class MindstormsGadget(AlexaGadget):
                                 'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
                             while self._waiting_for_speech:
                                 sleep(0.1)
-                            print('done', file=stderr)
                     self.printer.draw_line(
                         float(child.attrib["x1"])/width,
                         float(child.attrib["y1"])/height,

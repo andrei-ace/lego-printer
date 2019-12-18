@@ -1,7 +1,7 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "alphabet with mindstorms",
+            "invocationName": "lego scripter",
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
@@ -183,7 +183,6 @@
             "intents": [
                 {
                     "name": "LearnIntent",
-                    "delegationStrategy": "ALWAYS",
                     "confirmationRequired": false,
                     "prompts": {},
                     "slots": [
