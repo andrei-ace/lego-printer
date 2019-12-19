@@ -32,12 +32,44 @@
                         }
                     ],
                     "samples": [
+                        "draw a letter {Letter}",
+                        "write a letter {Letter}",
                         "write letter {Letter}",
                         "write {Letter}",
                         "learn letter {Letter}",
                         "draw letter {Letter}",
                         "draw {Letter}",
                         "learn {Letter}"
+                    ]
+                },
+                {
+                    "name": "PlayGameIntent",
+                    "slots": [],
+                    "samples": [
+                        "Quiz",
+                        "Let's play a game",
+                        "Play a game"
+                    ]
+                },
+                {
+                    "name": "PlayGameAnswerIntent",
+                    "slots": [
+                        {
+                            "name": "Letter",
+                            "type": "Letter",
+                            "samples": [
+                                "Answer is {Letter}",
+                                "Answer is letter {Letter}",
+                                "{Letter}",
+                                "Letter {Letter}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "{Letter}",
+                        "Answer is {Letter}",
+                        "Answer is letter {Letter}",
+                        "Letter {Letter}"
                     ]
                 }
             ],
@@ -196,6 +228,22 @@
                             }
                         }
                     ]
+                },
+                {
+                    "name": "PlayGameAnswerIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Letter",
+                            "type": "Letter",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.551051320616.1560203168942"
+                            }
+                        }
+                    ]
                 }
             ],
             "delegationStrategy": "ALWAYS"
@@ -207,6 +255,15 @@
                     {
                         "type": "PlainText",
                         "value": "What letter should it be?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.551051320616.1560203168942",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What letter did you say?"
                     }
                 ]
             }

@@ -22,7 +22,7 @@ MAX_ROTATION_X = 16
 MAX_ROTATION_Y = 16
 MAX_SPEED_X = 80
 MAX_SPEED_Y = 80
-DEGREES_PEN = 27
+POSITION_PEN = 130
 
 # set logger to display on both EV3 Brick and console
 logging.basicConfig(level=logging.INFO, stream=stdout,
@@ -64,13 +64,15 @@ class Printer(object):
     def pen_down(self):
         if not self._pen_down:
             self.motor_pen.on_for_degrees(
-                speed=5, degrees=DEGREES_PEN, brake=True)
+                speed=25, degrees=POSITION_PEN, brake=True)
+            self.motor_pen.wait_until_not_moving()
         self._pen_down = True
 
     def pen_up(self):
         if self._pen_down:
             self.motor_pen.on_for_degrees(
-                speed=5, degrees=-DEGREES_PEN, brake=True)
+                speed=25, degrees=-POSITION_PEN, brake=True)
+            self.motor_pen.wait_until_not_moving()
         self._pen_down = False
 
     def draw_arc(self, rad_x, rad_y, large, sweep, sx, sy, ex, ey):
@@ -140,16 +142,18 @@ class Printer(object):
         self.move_wh(from_x - self.x(), from_y - self.y())
         if pen:
             self.pen_down()
-        if (to_x-self.x()) < 0.000001 and (to_x-self.x()) > -0.000001:
-            self.move_wh(0, to_y-self.y())
+        x = self.x()
+        y = self.y()
+        if (to_x-x) < 0.00001 and (to_x-x) > -0.00001:
+            self.move_wh(0, to_y-y)
         else:
-            m = abs((to_y-self.y())/(to_x-self.x()))
+            m = abs((to_y-y)/(to_x-x))
             speed_x = 1
             speed_y = m * speed_x
             magnitude = sqrt(speed_x**2 + speed_y**2)
             speed_x = (speed_x/magnitude) * MAX_SPEED_X
             speed_y = (speed_y/magnitude) * MAX_SPEED_Y
-            self.move_wh(to_x-self.x(), to_y-self.y(),
+            self.move_wh(to_x-x, to_y-y,
                          speed_x=speed_x, speed_y=speed_y)
 
         if pen:
@@ -218,13 +222,13 @@ class Solver(object):
         n = -2*(a**2)*y1 + 2*(a**2)*y2
         q = -(b**2)*x1**2 - (a**2)*(y1**2) + (b**2)*(x2**2) + (a**2)*(y2**2)
 
-        if n < -0.000001 or n > 0.000001:
+        if n < -0.00001 or n > 0.00001:
             aa = b**2 + (a**2)*(m**2)/(n**2)
             bb = -2*(b**2)*x1 - (2*q*(a**2)*m)/(n**2) + (2*(a**2)*y1*m)/n
             cc = ((a**2)*(q**2))/(n**2) - (2*(a**2)*y1*q)/n + \
                 (b**2)*(x1**2) + (a**2)*(y1**2) - (a**2)*(b**2)
 
-            if bb**2 - 4*aa*cc < -0.000001 or bb**2 - 4*aa*cc > 0.000001:
+            if bb**2 - 4*aa*cc < -0.00001 or bb**2 - 4*aa*cc > 0.00001:
                 h1 = (-bb + sqrt(bb**2 - 4*aa*cc))/(2*aa)
                 h2 = (-bb - sqrt(bb**2 - 4*aa*cc))/(2*aa)
             else:
@@ -235,12 +239,12 @@ class Solver(object):
         else:
             aa = a**2
             bb = -2*a**2*y1
-            if m < -0.0000001 or m > 0.000001:
+            if m < -0.0001 or m > 0.0001:
                 cc = b**2*q**2/m**2 - 2*b**2*x1*q/m + b**2*x1**2 + a**2*y1**2 - a**2*b**2
 
                 h1 = q/m
                 h2 = q/m
-                if bb**2 - 4*aa*cc < -0.000001 or bb**2 - 4*aa*cc > 0.000001:
+                if bb**2 - 4*aa*cc < -0.00001 or bb**2 - 4*aa*cc > 0.00001:
                     k1 = (-bb + sqrt(bb**2 - 4*aa*cc))/(2*aa)
                     k2 = (-bb - sqrt(bb**2 - 4*aa*cc))/(2*aa)
                 else:
@@ -357,8 +361,23 @@ class MindstormsGadget(AlexaGadget):
             payload = json.loads(directive.payload.decode("utf-8"))
             print("Payload: {}".format(payload), file=stderr)
             self._waiting_for_speech = True
-            threading.Thread(target=self.learn, args=(
-                payload["letter"],), daemon=True).start()
+            threading.Thread(target=self.draw_letter, args=(
+                payload["letter"], True), daemon=True).start()
+        except KeyError:
+            print("Missing expected parameters: {}".format(
+                directive), file=stderr)
+
+    def on_custom_mindstorms_gadget_guess(self, directive):
+        """
+        Handles the Custom.Mindstorms.Gadget control directive.
+        :param directive: the custom directive with the matching namespace and name
+        """
+        try:
+            payload = json.loads(directive.payload.decode("utf-8"))
+            print("Payload: {}".format(payload), file=stderr)
+            self._waiting_for_speech = True
+            threading.Thread(target=self.draw_letter, args=(
+                payload["letter"], False), daemon=True).start()
         except KeyError:
             print("Missing expected parameters: {}".format(
                 directive), file=stderr)
@@ -383,7 +402,7 @@ class MindstormsGadget(AlexaGadget):
             print("Missing expected parameters: {}".format(
                 directive), file=stderr)
 
-    def learn(self, letter):
+    def draw_letter(self, letter, speak):
         print('drawing letter ', letter, file=stderr)
         while self._waiting_for_speech:
             sleep(0.1)
@@ -398,21 +417,23 @@ class MindstormsGadget(AlexaGadget):
                 if child.tag == '{http://www.w3.org/2000/svg}path':
                     for pos_title in child:
                         if pos_title.tag == '{http://www.w3.org/2000/svg}title':
-                            self._waiting_for_speech = True
-                            self.send_custom_event(
-                                'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
-                            while self._waiting_for_speech:
-                                sleep(0.1)
+                            if speak:
+                                self._waiting_for_speech = True
+                                self.send_custom_event(
+                                    'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
+                                while self._waiting_for_speech:
+                                    sleep(0.1)
                     self.printer.draw_svg_path(
                         child.attrib["d"], width, height)
                 elif child.tag == '{http://www.w3.org/2000/svg}line':
                     for pos_title in child:
                         if pos_title.tag == '{http://www.w3.org/2000/svg}title':
-                            self._waiting_for_speech = True
-                            self.send_custom_event(
-                                'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
-                            while self._waiting_for_speech:
-                                sleep(0.1)
+                            if speak:
+                                self._waiting_for_speech = True
+                                self.send_custom_event(
+                                    'Custom.Mindstorms.Gadget', 'speak', {'txt': pos_title.text})
+                                while self._waiting_for_speech:
+                                    sleep(0.1)
                     self.printer.draw_line(
                         float(child.attrib["x1"])/width,
                         float(child.attrib["y1"])/height,

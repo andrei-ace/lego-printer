@@ -4,6 +4,7 @@ const Util = require('./util');
 // The namespace of the custom directive to be sent by this skill
 const NAMESPACE = 'Custom.Mindstorms.Gadget';
 const NAME_LEARN = 'learn'
+const NAME_GUESS = 'guess'
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
@@ -24,14 +25,15 @@ const LaunchRequestHandler = {
         let endpointId = apiResponse.endpoints[0].endpointId || [];
         Util.putSessionAttribute(handlerInput, 'endpointId', endpointId);
 
-        // Set skill duration to 1 minute (2 30-seconds interval)
-        Util.putSessionAttribute(handlerInput, 'duration', 2);
+        // Set skill duration to 2 minutes (4 30-seconds interval)
+        Util.putSessionAttribute(handlerInput, 'duration', 4);
         // Set the token to track the event handler
         const token = handlerInput.requestEnvelope.request.requestId;
         Util.putSessionAttribute(handlerInput, 'token', token);
 
         return handlerInput.responseBuilder
-            .speak("Welcome, how can I help?")
+            .speak("Welcome to Lego Scripter. I can teach you how to write the letters of the " +
+                "alphabet or we can play a game. What should it be?")
             .withShouldEndSession(false)
             .addDirective(buildStartEventHandler(token, 30000, {}))
             .getResponse();
@@ -67,34 +69,16 @@ const ErrorHandler = {
     }
 };
 
-// The intent reflector is used for interaction model testing and debugging.
-// It will simply repeat the intent the user said. You can create custom handlers
-// for your intents by defining them above, then also adding them to the request
-// handler chain below.
-const IntentReflectorHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest';
-    },
-    handle(handlerInput) {
-        const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
-        const speakOutput = `You just triggered ${intentName}`;
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .getResponse();
-    }
-};
-
 const HelpIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'You can say hello to me! How can I help?';
-
+        const speakOutput = 'I can draw a letter for your or we can play a game! How can I help?';
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .withShouldEndSession(false)
             .getResponse();
     }
 };
@@ -105,10 +89,10 @@ const CancelAndStopIntentHandler = {
                 || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
     },
     handle(handlerInput) {
-        const speakOutput = 'Goodbye!';
         return handlerInput.responseBuilder
             .addDirective(buildStopEventHandlerDirective(handlerInput))
-            .speak(speakOutput)
+            .speak('Goodbye!')
+            .withShouldEndSession(true)
             .getResponse();
     }
 };
@@ -137,18 +121,19 @@ const LearnIntentHandler = {
         const attributesManager = handlerInput.attributesManager;
         let endpointId = attributesManager.getSessionAttributes().endpointId || [];
 
-        // Set skill duration to 1 minute (2 30-seconds interval)
-        Util.putSessionAttribute(handlerInput, 'duration', 2);
+        // Set skill duration to 2 minutes (4 30-seconds interval)
+        Util.putSessionAttribute(handlerInput, 'duration', 4);
 
         let directive = Util.build(endpointId, NAMESPACE, NAME_LEARN,
             {
                 letter: letter
             });
+        Util.putSessionAttribute(handlerInput, 'mode', 'learn');
 
         console.log(directive);
 
         return handlerInput.responseBuilder
-            .speak(`You asked for letter ${letter}.`)
+            .speak(`Let me draw letter ${letter} for you.`)
             .addDirective(directive)
             .getResponse();
     }
@@ -197,11 +182,20 @@ const EventsReceivedRequestHandler = {
         }
 
         if (name === 'done') {
-            return handlerInput.responseBuilder
-                .speak('How can I help?')
-                .addDirective(buildStopEventHandlerDirective(handlerInput))
-                .withShouldEndSession(false)
-                .getResponse();
+            let mode = handlerInput.attributesManager.getSessionAttributes().mode || 'learn';
+            if (mode === 'learn') {
+                return handlerInput.responseBuilder
+                    .speak('Done. What to do next?')
+                    .addDirective(buildStopEventHandlerDirective(handlerInput))
+                    .withShouldEndSession(false)
+                    .getResponse();
+            } else if (mode === 'guess') {
+                return handlerInput.responseBuilder
+                    .speak('What letter is this?')
+                    .addDirective(buildStopEventHandlerDirective(handlerInput))
+                    .withShouldEndSession(false)
+                    .getResponse();
+            }
         }
 
         return handlerInput.responseBuilder
@@ -231,10 +225,74 @@ const ExpiredRequestHandler = {
         else {
             // End skill session
             return handlerInput.responseBuilder
-                .speak("Skill duration expired. Goodbye.")
                 .withShouldEndSession(true)
                 .getResponse();
         }
+    }
+};
+
+const PlayGameIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'PlayGameIntent';
+    },
+    handle(handlerInput) {
+        const attributesManager = handlerInput.attributesManager;
+        let endpointId = attributesManager.getSessionAttributes().endpointId || [];
+
+        // Set skill duration to 2 minutes (4 30-seconds interval)
+        Util.putSessionAttribute(handlerInput, 'duration', 4);
+
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXTZ";
+        var rnum = Math.floor(Math.random() * alphabet.length);
+        let letter = alphabet[rnum]
+        let directive = Util.build(endpointId, NAMESPACE, NAME_GUESS,
+            {
+                letter: letter
+            });
+
+        console.log(directive);
+
+        Util.putSessionAttribute(handlerInput, 'mode', 'guess');
+        Util.putSessionAttribute(handlerInput, 'letter', letter);
+
+        return handlerInput.responseBuilder
+            .speak(`I will draw a letter and you have to guess which one.`)
+            .addDirective(directive)
+            .getResponse();
+    }
+};
+
+const PlayGameAnswerIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'PlayGameAnswerIntent';
+    },
+    handle(handlerInput) {
+        let mode = handlerInput.attributesManager.getSessionAttributes().mode || 'learn';
+        let answer = Alexa.getSlotValue(handlerInput.requestEnvelope, 'Letter');
+        answer = answer.charAt(0).toUpperCase();
+        answer = answer.toUpperCase();
+
+        if (mode === 'guess') {
+            let letter = handlerInput.attributesManager.getSessionAttributes().letter || '';
+            if (letter === answer) {
+                return handlerInput.responseBuilder
+                    .speak(`Correct! What should we do next?`)
+                    .withShouldEndSession(false)
+                    .getResponse();
+            } else {
+                return handlerInput.responseBuilder
+                    .speak(`Incorrect! Try again.`)
+                    .withShouldEndSession(false)
+                    .getResponse();
+            }
+        }
+
+        return handlerInput.responseBuilder
+            .speak(`How can I help?`)
+            .withShouldEndSession(false)
+            .getResponse();
     }
 };
 
@@ -245,12 +303,13 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestHandler,
         LearnIntentHandler,
+        PlayGameIntentHandler,
+        PlayGameAnswerIntentHandler,
         EventsReceivedRequestHandler,
         ExpiredRequestHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         SessionEndedRequestHandler,
-        IntentReflectorHandler, // make sure IntentReflectorHandler is last so it doesn't override your custom intent handlers
     )
     .addRequestInterceptors(RequestInterceptor)
     .addErrorHandlers(
